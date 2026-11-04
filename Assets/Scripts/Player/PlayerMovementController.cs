@@ -52,11 +52,15 @@ public class TopDownPlayerController : MonoBehaviour
     public Vector3 Velocity => horizontalVelocity;
     public float CurrentSpeed => horizontalVelocity.magnitude;
 
+    //Ref interaction
+    private PlayerInteractor interactor;
+
     private void Awake()
     {
         controller = GetComponent<CharacterController>();
         dash = GetComponent<PlayerDash>();
         if (cam == null) cam = Camera.main;
+        interactor = GetComponent<PlayerInteractor>();
     }
 
     private void OnEnable()
@@ -108,6 +112,7 @@ public class TopDownPlayerController : MonoBehaviour
     private void HandleMovement(Vector3 moveDir)
     {
         float speed = moveSpeed * (IsAiming ? aimSpeedMultiplier : 1f);
+        if (interactor) speed *= interactor.SpeedMultiplier; //Acá se lentea la velocidad en caso de estar interactuando con un HeavyObject.
         Vector3 targetVelocity = moveDir * speed;
 
         float rate = targetVelocity.sqrMagnitude > horizontalVelocity.sqrMagnitude ? acceleration : deceleration;
