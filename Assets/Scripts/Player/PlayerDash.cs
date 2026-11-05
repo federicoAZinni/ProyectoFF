@@ -42,7 +42,7 @@ public class PlayerDash : MonoBehaviour
     [SerializeField] private float wallOffset = 0.1f;
 
     private CharacterController controller;
-    private TopDownPlayerController movement;
+    private PlayerMovementController movement;
     private int invincibleLayer = -1;
     private float nextDashTime;
 
@@ -63,7 +63,7 @@ public class PlayerDash : MonoBehaviour
     private void Awake()
     {
         controller = GetComponent<CharacterController>();
-        movement = GetComponent<TopDownPlayerController>();
+        movement = GetComponent<PlayerMovementController>();
 
         invincibleLayer = LayerMask.NameToLayer(invincibleLayerName);
         if (invincibleLayer == -1)

@@ -6,10 +6,11 @@ using UnityEngine.InputSystem;
 /// - Stick izquierdo / WASD: mueve al personaje (mira hacia donde camina).
 /// - Mantener "Aim" (click derecho / botón de gamepad): el personaje rota
 ///   con el stick derecho (gamepad) o hacia el cursor (mouse).
+/// - Jump (Espacio / botón sur): salto con coyote time, buffer y altura variable.
 /// Compatible con Cinemachine: usa Camera.main (la que tiene el CinemachineBrain).
 /// </summary>
 [RequireComponent(typeof(CharacterController))]
-public class TopDownPlayerController : MonoBehaviour
+public class PlayerMovementController : MonoBehaviour
 {
     [Header("Input (Input System)")]
     [Tooltip("Vector2 - ej: Player/Move (stick izquierdo / WASD)")]
@@ -18,6 +19,8 @@ public class TopDownPlayerController : MonoBehaviour
     [SerializeField] private InputActionReference aimAction;
     [Tooltip("Vector2 - ej: Player/Look (stick derecho). Solo se usa con gamepad")]
     [SerializeField] private InputActionReference lookAction;
+    [Tooltip("Button - ej: Player/Jump (Espacio / botón sur del gamepad)")]
+    [SerializeField] private InputActionReference jumpAction;
 
     [Header("Movimiento")]
     [SerializeField] private float moveSpeed = 5f;
@@ -26,6 +29,18 @@ public class TopDownPlayerController : MonoBehaviour
     [SerializeField] private float acceleration = 20f;
     [SerializeField] private float deceleration = 25f;
     [SerializeField] private float gravity = -20f;
+
+    [Header("Salto")]
+    [Tooltip("Altura máxima del salto (en unidades). La velocidad inicial se calcula a partir de la gravedad.")]
+    [SerializeField] private float jumpHeight = 1.5f;
+    [Tooltip("Margen para saltar justo después de caerse de un borde (seg)")]
+    [SerializeField] private float coyoteTime = 0.12f;
+    [Tooltip("Margen para registrar el salto si se aprieta un poco antes de tocar el piso (seg)")]
+    [SerializeField] private float jumpBufferTime = 0.12f;
+    [Tooltip("Al soltar el botón subiendo, la velocidad vertical se multiplica por esto (1 = altura fija)")]
+    [SerializeField, Range(0f, 1f)] private float jumpCutMultiplier = 0.5f;
+    [Tooltip("Control horizontal en el aire (1 = igual que en el piso)")]
+    [SerializeField, Range(0f, 1f)] private float airControl = 0.6f;
 
     [Header("Rotación")]
     [Tooltip("Grados/seg al rotar hacia la dirección de movimiento")]
@@ -46,10 +61,17 @@ public class TopDownPlayerController : MonoBehaviour
     private float verticalVelocity;
     private PlayerDash dash;
 
+    private float lastGroundedTime = float.NegativeInfinity;
+    private float lastJumpPressedTime = float.NegativeInfinity;
+
     public bool IsAiming { get; private set; }
+    public bool IsGrounded => controller.isGrounded;
+    /// <summary>True desde que se salta hasta volver a tocar el piso.</summary>
+    public bool IsJumping { get; private set; }
     /// <summary>Dirección de movimiento en el mundo según el input (magnitud 0..1).</summary>
     public Vector3 MoveDirection { get; private set; }
     public Vector3 Velocity => horizontalVelocity;
+    public float VerticalVelocity => verticalVelocity;
     public float CurrentSpeed => horizontalVelocity.magnitude;
 
     //Ref interaction
@@ -68,6 +90,7 @@ public class TopDownPlayerController : MonoBehaviour
         moveAction?.action.Enable();
         aimAction?.action.Enable();
         lookAction?.action.Enable();
+        jumpAction?.action.Enable();
     }
 
     private void OnDisable()
@@ -75,10 +98,15 @@ public class TopDownPlayerController : MonoBehaviour
         moveAction?.action.Disable();
         aimAction?.action.Disable();
         lookAction?.action.Disable();
+        jumpAction?.action.Disable();
     }
 
     private void Update()
     {
+        // Se registra antes del dash para que un salto apretado al final del dash no se pierda (buffer).
+        if (jumpAction != null && jumpAction.action.WasPressedThisFrame())
+            lastJumpPressedTime = Time.time;
+
         // Durante el dash, el PlayerDash controla el movimiento
         if (dash != null && dash.IsDashing)
         {
@@ -111,18 +139,60 @@ public class TopDownPlayerController : MonoBehaviour
 
     private void HandleMovement(Vector3 moveDir)
     {
+        bool grounded = controller.isGrounded;
+
         float speed = moveSpeed * (IsAiming ? aimSpeedMultiplier : 1f);
         if (interactor) speed *= interactor.SpeedMultiplier; //Acá se lentea la velocidad en caso de estar interactuando con un HeavyObject.
         Vector3 targetVelocity = moveDir * speed;
 
         float rate = targetVelocity.sqrMagnitude > horizontalVelocity.sqrMagnitude ? acceleration : deceleration;
+        if (!grounded) rate *= airControl;
         horizontalVelocity = Vector3.MoveTowards(horizontalVelocity, targetVelocity, rate * Time.deltaTime);
 
-        if (controller.isGrounded && verticalVelocity < 0f)
+        if (grounded && verticalVelocity < 0f)
+        {
             verticalVelocity = -2f;
+            IsJumping = false;
+        }
+
+        HandleJump(grounded);
+
         verticalVelocity += gravity * Time.deltaTime;
 
-        controller.Move((horizontalVelocity + Vector3.up * verticalVelocity) * Time.deltaTime);
+        CollisionFlags flags = controller.Move((horizontalVelocity + Vector3.up * verticalVelocity) * Time.deltaTime);
+
+        // Si se golpea la cabeza contra un techo, empieza a caer en vez de quedar "pegado".
+        if ((flags & CollisionFlags.Above) != 0 && verticalVelocity > 0f)
+            verticalVelocity = 0f;
+    }
+
+    // ---------------- Salto ----------------
+
+    private void HandleJump(bool grounded)
+    {
+        if (jumpAction == null) return;
+
+        if (grounded) lastGroundedTime = Time.time;
+
+        bool canJump = Time.time - lastGroundedTime <= coyoteTime;
+        bool wantsJump = Time.time - lastJumpPressedTime <= jumpBufferTime;
+
+        // Arrastrando un objeto pesado no se salta: el "joint" trabaja en el plano XZ.
+        if (interactor && interactor.Current is HeavyPushable) canJump = false;
+
+        if (canJump && wantsJump)
+        {
+            verticalVelocity = Mathf.Sqrt(2f * jumpHeight * -gravity);
+            IsJumping = true;
+
+            // Consumimos ambos para que no haya doble salto por coyote time o buffer.
+            lastGroundedTime = float.NegativeInfinity;
+            lastJumpPressedTime = float.NegativeInfinity;
+        }
+
+        // Salto variable: soltar el botón mientras se sube corta el salto.
+        if (IsJumping && verticalVelocity > 0f && jumpAction.action.WasReleasedThisFrame())
+            verticalVelocity *= jumpCutMultiplier;
     }
 
     // ---------------- Rotación ----------------

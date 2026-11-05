@@ -25,7 +25,7 @@ Material:
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords:
-  - _SUNDISK_SIMPLE
+  - _SUNDISK_HIGH_QUALITY
   m_InvalidKeywords: []
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
@@ -99,7 +99,7 @@ Material:
     - _AddPrecomputedVelocity: 0
     - _AlphaClip: 0
     - _AlphaToMask: 0
-    - _AtmosphereThickness: 0.91
+    - _AtmosphereThickness: 0.86
     - _Blend: 0
     - _BlendModePreserveSpecular: 1
     - _BumpScale: 1
@@ -126,9 +126,9 @@ Material:
     - _SpecularHighlights: 1
     - _SrcBlend: 1
     - _SrcBlendAlpha: 1
-    - _SunDisk: 1
-    - _SunSize: 0.287
-    - _SunSizeConvergence: 5
+    - _SunDisk: 2
+    - _SunSize: 0.34
+    - _SunSizeConvergence: 5.22
     - _Surface: 0
     - _WorkflowMode: 1
     - _XRMotionVectorsPass: 1
@@ -137,8 +137,8 @@ Material:
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _GroundColor: {r: 0.5849056, g: 0.5849056, b: 0.5849056, a: 1}
-    - _SkyTint: {r: 0.8018868, g: 0.7224546, b: 0.77557236, a: 1}
+    - _GroundColor: {r: 0.6650944, g: 0.9294346, b: 1, a: 1}
+    - _SkyTint: {r: 0.9528302, g: 0.3460751, b: 0.7708036, a: 1}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
