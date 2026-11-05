@@ -1,12 +1,12 @@
-using System;
+Ôªøusing System;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 /// <summary>
-/// Dash hacia la direcciÛn en la que se mueve el player
-/// (si est· quieto, hacia su forward).
-/// - Calcula la distancia disponible con un CapsuleCast para no atravesar obst·culos.
+/// Dash hacia la direcci√≥n en la que se mueve el player
+/// (si est√° quieto, hacia su forward).
+/// - Calcula la distancia disponible con un CapsuleCast para no atravesar obst√°culos.
 /// - Cambia el layer del player a "InvinciblePlayer" durante un tiempo configurable
 ///   y luego restaura el layer original.
 /// </summary>
@@ -18,7 +18,7 @@ public class PlayerDash : MonoBehaviour
     [SerializeField] private InputActionReference dashAction;
 
     [Header("Dash")]
-    [Tooltip("Distancia m·xima del dash (en unidades)")]
+    [Tooltip("Distancia m√°xima del dash (en unidades)")]
     [SerializeField] private float dashDistance = 5f;
     [Tooltip("Velocidad del dash (unidades/seg)")]
     [SerializeField] private float dashSpeed = 25f;
@@ -29,16 +29,16 @@ public class PlayerDash : MonoBehaviour
     [SerializeField] private string invincibleLayerName = "InvinciblePlayer";
     [Tooltip("Tiempo que el player permanece en el layer InvinciblePlayer")]
     [SerializeField] private float invincibleDuration = 0.3f;
-    [Tooltip("Cambiar tambiÈn el layer de los hijos (hurtboxes, etc.)")]
+    [Tooltip("Cambiar tambi√©n el layer de los hijos (hurtboxes, etc.)")]
     [SerializeField] private bool includeChildren = true;
 
-    [Tooltip("Input mÌnimo del stick para considerar que el player se est· moviendo")]
+    [Tooltip("Input m√≠nimo del stick para considerar que el player se est√° moviendo")]
     [SerializeField, Range(0f, 1f)] private float moveInputThreshold = 0.1f;
 
-    [Header("DetecciÛn de obst·culos")]
+    [Header("Detecci√≥n de obst√°culos")]
     [Tooltip("Layers que frenan el dash (paredes, props...). No incluyas el layer del player.")]
     [SerializeField] private LayerMask obstacleMask = ~0;
-    [Tooltip("Margen que se deja entre el player y el obst·culo")]
+    [Tooltip("Margen que se deja entre el player y el obst√°culo")]
     [SerializeField] private float wallOffset = 0.1f;
 
     private CharacterController controller;
@@ -94,7 +94,7 @@ public class PlayerDash : MonoBehaviour
 
     private void OnDashPerformed(InputAction.CallbackContext ctx) => TryDash();
 
-    /// <summary>Intenta ejecutar el dash. Se puede llamar tambiÈn desde otros scripts.</summary>
+    /// <summary>Intenta ejecutar el dash. Se puede llamar tambi√©n desde otros scripts.</summary>
     public bool TryDash()
     {
         if (!CanDash) return false;
@@ -103,7 +103,7 @@ public class PlayerDash : MonoBehaviour
         DashDirection = direction;
         float distance = GetAvailableDistance(direction);
 
-        // Invencibilidad (independiente de la duraciÛn del dash)
+        // Invencibilidad (independiente de la duraci√≥n del dash)
         if (invincibleRoutine != null) StopCoroutine(invincibleRoutine);
         invincibleRoutine = StartCoroutine(InvincibleRoutine());
 
@@ -111,7 +111,7 @@ public class PlayerDash : MonoBehaviour
         return true;
     }
 
-    /// <summary>DirecciÛn del movimiento actual; si no hay input, el forward del player.</summary>
+    /// <summary>Direcci√≥n del movimiento actual; si no hay input, el forward del player.</summary>
     private Vector3 GetDashDirection()
     {
         if (movement != null)
@@ -125,7 +125,7 @@ public class PlayerDash : MonoBehaviour
         return Vector3.ProjectOnPlane(transform.forward, Vector3.up).normalized;
     }
 
-    /// <summary>Lanza un CapsuleCast hacia adelante y devuelve cu·nto se puede avanzar.</summary>
+    /// <summary>Lanza un CapsuleCast hacia adelante y devuelve cu√°nto se puede avanzar.</summary>
     private float GetAvailableDistance(Vector3 direction)
     {
         GetCapsulePoints(out Vector3 p1, out Vector3 p2, out float radius);
@@ -141,7 +141,7 @@ public class PlayerDash : MonoBehaviour
 
     private void GetCapsulePoints(out Vector3 p1, out Vector3 p2, out float radius)
     {
-        // Radio un poco menor y c·psula levantada apenas para no detectar el piso
+        // Radio un poco menor y c√°psula levantada apenas para no detectar el piso
         radius = controller.radius * 0.95f;
         Vector3 center = transform.TransformPoint(controller.center) + Vector3.up * 0.05f;
         float half = Mathf.Max(0f, controller.height * 0.5f - controller.radius);
@@ -177,7 +177,7 @@ public class PlayerDash : MonoBehaviour
     {
         if (invincibleLayer == -1) yield break;
 
-        // Solo guardamos los layers originales si no est·bamos ya invencibles
+        // Solo guardamos los layers originales si no est√°bamos ya invencibles
         if (!IsInvincible) CacheOriginalLayers();
 
         IsInvincible = true;

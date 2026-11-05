@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 05a82118687ea3547a848b56155e64eb
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures: []
+  nonModifiableTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 335166
+  packageName: Free 3D Low Poly Props Pack
+  packageVersion: 1.0
+  assetPath: Assets/Free 3D Low Poly Props Pack/Shaders/TCP2 Hybrid Shader Outline.shader
+  uploadId: 793046

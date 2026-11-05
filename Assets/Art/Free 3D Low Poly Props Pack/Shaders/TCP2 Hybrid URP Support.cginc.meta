@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 19f2994e14153b1448614bf890f45d74
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures: []
+  nonModifiableTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 335166
+  packageName: Free 3D Low Poly Props Pack
+  packageVersion: 1.0
+  assetPath: Assets/Free 3D Low Poly Props Pack/Shaders/TCP2 Hybrid URP Support.cginc
+  uploadId: 793046

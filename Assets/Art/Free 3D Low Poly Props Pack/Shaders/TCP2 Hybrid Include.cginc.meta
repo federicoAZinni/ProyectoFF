@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: adc150300fd16b84387518b7aed4cb15
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures: []
+  nonModifiableTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 335166
+  packageName: Free 3D Low Poly Props Pack
+  packageVersion: 1.0
+  assetPath: Assets/Free 3D Low Poly Props Pack/Shaders/TCP2 Hybrid Include.cginc
+  uploadId: 793046

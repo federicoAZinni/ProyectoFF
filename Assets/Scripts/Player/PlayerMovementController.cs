@@ -4,7 +4,7 @@ using UnityEngine.InputSystem;
 /// <summary>
 /// Movimiento top-down con el nuevo Input System.
 /// - Stick izquierdo / WASD: mueve al personaje (mira hacia donde camina).
-/// - Mantener "Aim" (click derecho / botÛn de gamepad): el personaje rota
+/// - Mantener "Aim" (click derecho / bot√≥n de gamepad): el personaje rota
 ///   con el stick derecho (gamepad) o hacia el cursor (mouse).
 /// Compatible con Cinemachine: usa Camera.main (la que tiene el CinemachineBrain).
 /// </summary>
@@ -27,18 +27,18 @@ public class TopDownPlayerController : MonoBehaviour
     [SerializeField] private float deceleration = 25f;
     [SerializeField] private float gravity = -20f;
 
-    [Header("RotaciÛn")]
-    [Tooltip("Grados/seg al rotar hacia la direcciÛn de movimiento")]
+    [Header("Rotaci√≥n")]
+    [Tooltip("Grados/seg al rotar hacia la direcci√≥n de movimiento")]
     [SerializeField] private float moveRotationSpeed = 720f;
     [Tooltip("Grados/seg al rotar mientras se apunta")]
     [SerializeField] private float aimRotationSpeed = 1080f;
     [Tooltip("Zona muerta del stick derecho")]
     [SerializeField, Range(0f, 1f)] private float lookDeadZone = 0.2f;
 
-    [Header("C·mara")]
-    [Tooltip("Si est· vacÌo usa Camera.main (la del CinemachineBrain)")]
+    [Header("C√°mara")]
+    [Tooltip("Si est√° vac√≠o usa Camera.main (la del CinemachineBrain)")]
     [SerializeField] private Camera cam;
-    [Tooltip("El movimiento es relativo a la orientaciÛn de la c·mara")]
+    [Tooltip("El movimiento es relativo a la orientaci√≥n de la c√°mara")]
     [SerializeField] private bool cameraRelative = true;
 
     private CharacterController controller;
@@ -47,7 +47,7 @@ public class TopDownPlayerController : MonoBehaviour
     private PlayerDash dash;
 
     public bool IsAiming { get; private set; }
-    /// <summary>DirecciÛn de movimiento en el mundo seg˙n el input (magnitud 0..1).</summary>
+    /// <summary>Direcci√≥n de movimiento en el mundo seg√∫n el input (magnitud 0..1).</summary>
     public Vector3 MoveDirection { get; private set; }
     public Vector3 Velocity => horizontalVelocity;
     public float CurrentSpeed => horizontalVelocity.magnitude;
@@ -112,7 +112,7 @@ public class TopDownPlayerController : MonoBehaviour
     private void HandleMovement(Vector3 moveDir)
     {
         float speed = moveSpeed * (IsAiming ? aimSpeedMultiplier : 1f);
-        if (interactor) speed *= interactor.SpeedMultiplier; //Ac· se lentea la velocidad en caso de estar interactuando con un HeavyObject.
+        if (interactor) speed *= interactor.SpeedMultiplier; //Ac√° se lentea la velocidad en caso de estar interactuando con un HeavyObject.
         Vector3 targetVelocity = moveDir * speed;
 
         float rate = targetVelocity.sqrMagnitude > horizontalVelocity.sqrMagnitude ? acceleration : deceleration;
@@ -125,11 +125,11 @@ public class TopDownPlayerController : MonoBehaviour
         controller.Move((horizontalVelocity + Vector3.up * verticalVelocity) * Time.deltaTime);
     }
 
-    // ---------------- RotaciÛn ----------------
+    // ---------------- Rotaci√≥n ----------------
 
     private void HandleAimRotation()
     {
-        // Detectamos quÈ dispositivo activÛ el botÛn de apuntar
+        // Detectamos qu√© dispositivo activ√≥ el bot√≥n de apuntar
         InputDevice device = aimAction.action.activeControl?.device;
 
         Vector3 aimDir;
@@ -146,7 +146,7 @@ public class TopDownPlayerController : MonoBehaviour
         if (lookAction == null) return Vector3.zero;
 
         Vector2 stick = lookAction.action.ReadValue<Vector2>();
-        if (stick.magnitude < lookDeadZone) return Vector3.zero; // mantiene la rotaciÛn actual
+        if (stick.magnitude < lookDeadZone) return Vector3.zero; // mantiene la rotaci√≥n actual
 
         return InputToWorld(stick.normalized);
     }
@@ -175,14 +175,14 @@ public class TopDownPlayerController : MonoBehaviour
 
     // ---------------- Utilidades ----------------
 
-    /// <summary>Convierte un input 2D a una direcciÛn en el mundo (relativa a la c·mara si corresponde).</summary>
+    /// <summary>Convierte un input 2D a una direcci√≥n en el mundo (relativa a la c√°mara si corresponde).</summary>
     private Vector3 InputToWorld(Vector2 input)
     {
         if (!cameraRelative || cam == null)
             return new Vector3(input.x, 0f, input.y);
 
         Vector3 forward = Vector3.ProjectOnPlane(cam.transform.forward, Vector3.up);
-        if (forward.sqrMagnitude < 0.01f) // c·mara mirando totalmente hacia abajo
+        if (forward.sqrMagnitude < 0.01f) // c√°mara mirando totalmente hacia abajo
             forward = Vector3.ProjectOnPlane(cam.transform.up, Vector3.up);
         forward.Normalize();
 
