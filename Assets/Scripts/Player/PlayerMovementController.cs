@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -63,6 +64,12 @@ public class PlayerMovementController : MonoBehaviour
 
     private float lastGroundedTime = float.NegativeInfinity;
     private float lastJumpPressedTime = float.NegativeInfinity;
+    private bool wasGrounded = true;
+
+    /// <summary>Se dispara en el frame en que el player salta.</summary>
+    public event Action Jumped;
+    /// <summary>Se dispara al tocar el piso después de estar en el aire. Pasa la velocidad de caída (positiva).</summary>
+    public event Action<float> Landed;
 
     public bool IsAiming { get; private set; }
     public bool IsGrounded => controller.isGrounded;
@@ -73,6 +80,8 @@ public class PlayerMovementController : MonoBehaviour
     public Vector3 Velocity => horizontalVelocity;
     public float VerticalVelocity => verticalVelocity;
     public float CurrentSpeed => horizontalVelocity.magnitude;
+    /// <summary>Velocidad base de caminata (sin multiplicadores). Útil para normalizar animaciones.</summary>
+    public float MoveSpeed => moveSpeed;
 
     //Ref interaction
     private PlayerInteractor interactor;
@@ -122,6 +131,11 @@ public class PlayerMovementController : MonoBehaviour
         MoveDirection = moveDir;
         HandleMovement(moveDir);
 
+        // Si una interacción bloquea la rotación (objeto pesado), no rotamos:
+        // así la rotación es correcta durante todo el frame y no solo después del LateUpdate del interactor.
+        if (interactor && interactor.IsRotationLocked)
+            return;
+
         if (IsAiming)
             HandleAimRotation();
         else
@@ -148,6 +162,11 @@ public class PlayerMovementController : MonoBehaviour
         float rate = targetVelocity.sqrMagnitude > horizontalVelocity.sqrMagnitude ? acceleration : deceleration;
         if (!grounded) rate *= airControl;
         horizontalVelocity = Vector3.MoveTowards(horizontalVelocity, targetVelocity, rate * Time.deltaTime);
+
+        // Aterrizaje: se chequea antes de resetear la velocidad vertical para poder informar la velocidad de caída.
+        if (grounded && !wasGrounded)
+            Landed?.Invoke(Mathf.Max(0f, -verticalVelocity));
+        wasGrounded = grounded;
 
         if (grounded && verticalVelocity < 0f)
         {
@@ -184,6 +203,7 @@ public class PlayerMovementController : MonoBehaviour
         {
             verticalVelocity = Mathf.Sqrt(2f * jumpHeight * -gravity);
             IsJumping = true;
+            Jumped?.Invoke();
 
             // Consumimos ambos para que no haya doble salto por coyote time o buffer.
             lastGroundedTime = float.NegativeInfinity;
