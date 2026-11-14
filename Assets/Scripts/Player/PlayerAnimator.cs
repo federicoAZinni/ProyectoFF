@@ -20,6 +20,18 @@ public class PlayerAnimator : MonoBehaviour
     [SerializeField] private float speedDampTime = 0.1f;
     [SerializeField] private float directionDampTime = 0.1f;
 
+    [Header("Medición de velocidad")]
+    [Tooltip("Ventana de muestreo de la velocidad. Promedia varios frames para que no salte " +
+             "cuando el movimiento ocurre en FixedUpdate o no todos los frames.")]
+    [SerializeField] private float velocitySampleWindow = 0.05f;
+    [Tooltip("Por debajo de este porcentaje de MoveSpeed se considera quieto (filtra el ruido del CharacterController).")]
+    [Range(0f, 0.3f)]
+    [SerializeField] private float deadzone = 0.05f;
+    [Tooltip("Cuando el objetivo es 0 y el valor suavizado baja de esto, se fija en 0 exacto.")]
+    [SerializeField] private float snapToZeroThreshold = 0.01f;
+    [Tooltip("Desplazamientos más rápidos que MoveSpeed x esto se consideran teletransporte y se ignoran.")]
+    [SerializeField] private float teleportSpeedMultiplier = 4f;
+
     [Header("Piso")]
     [Tooltip("Tiempo sin piso antes de considerar que está en el aire. Evita parpadeos en escalones y rampas.")]
     [SerializeField] private float airborneGraceTime = 0.1f;
@@ -29,20 +41,20 @@ public class PlayerAnimator : MonoBehaviour
     [SerializeField] private float hardLandSpeed = 12f;
 
     // ---- Parámetros del Animator ----
-    private static readonly int SpeedHash            = Animator.StringToHash("Speed");
-    private static readonly int MoveXHash            = Animator.StringToHash("MoveX");
-    private static readonly int MoveZHash            = Animator.StringToHash("MoveZ");
-    private static readonly int IsGroundedHash       = Animator.StringToHash("IsGrounded");
+    private static readonly int SpeedHash = Animator.StringToHash("Speed");
+    private static readonly int MoveXHash = Animator.StringToHash("MoveX");
+    private static readonly int MoveZHash = Animator.StringToHash("MoveZ");
+    private static readonly int IsGroundedHash = Animator.StringToHash("IsGrounded");
     private static readonly int VerticalVelocityHash = Animator.StringToHash("VerticalVelocity");
-    private static readonly int IsAimingHash         = Animator.StringToHash("IsAiming");
-    private static readonly int IsDashingHash        = Animator.StringToHash("IsDashing");
-    private static readonly int IsDraggingHash       = Animator.StringToHash("IsDragging");
-    private static readonly int IsCarryingHash       = Animator.StringToHash("IsCarrying");
-    private static readonly int JumpHash             = Animator.StringToHash("Jump");
-    private static readonly int HardLandHash         = Animator.StringToHash("HardLand");
-    private static readonly int DashHash             = Animator.StringToHash("Dash");
-    private static readonly int PickUpHash           = Animator.StringToHash("PickUp");
-    private static readonly int ThrowHash            = Animator.StringToHash("Throw");
+    private static readonly int IsAimingHash = Animator.StringToHash("IsAiming");
+    private static readonly int IsDashingHash = Animator.StringToHash("IsDashing");
+    private static readonly int IsDraggingHash = Animator.StringToHash("IsDragging");
+    private static readonly int IsCarryingHash = Animator.StringToHash("IsCarrying");
+    private static readonly int JumpHash = Animator.StringToHash("Jump");
+    private static readonly int HardLandHash = Animator.StringToHash("HardLand");
+    private static readonly int DashHash = Animator.StringToHash("Dash");
+    private static readonly int PickUpHash = Animator.StringToHash("PickUp");
+    private static readonly int ThrowHash = Animator.StringToHash("Throw");
 
     private PlayerMovementController movement;
     private PlayerDash dash;
@@ -50,13 +62,18 @@ public class PlayerAnimator : MonoBehaviour
     private CharacterController controller;
 
     private readonly HashSet<int> existingParams = new HashSet<int>();
-    private Vector3 lastPosition;
     private float lastGroundedTime;
+
+    // Medición de velocidad por ventana
+    private Vector3 lastPosition;
+    private Vector3 accumulatedDisplacement;
+    private float accumulatedTime;
+    private Vector3 measuredVelocity;
 
     private void Awake()
     {
-        movement   = GetComponent<PlayerMovementController>();
-        dash       = GetComponent<PlayerDash>();
+        movement = GetComponent<PlayerMovementController>();
+        dash = GetComponent<PlayerDash>();
         interactor = GetComponent<PlayerInteractor>();
         controller = GetComponent<CharacterController>();
 
@@ -72,12 +89,14 @@ public class PlayerAnimator : MonoBehaviour
         animator.applyRootMotion = false;
 
         CacheParameters();
-        lastPosition = transform.position;
+        ResetVelocitySampling();
         lastGroundedTime = Time.time;
     }
 
     private void OnEnable()
     {
+        ResetVelocitySampling();
+
         if (movement)
         {
             movement.Jumped += OnJumped;
@@ -86,12 +105,12 @@ public class PlayerAnimator : MonoBehaviour
         if (dash)
         {
             dash.DashStarted += OnDashStarted;
-            dash.DashEnded   += OnDashEnded;
+            dash.DashEnded += OnDashEnded;
         }
         if (interactor)
         {
             interactor.InteractionStarted += OnInteractionStarted;
-            interactor.InteractionEnded   += OnInteractionEnded;
+            interactor.InteractionEnded += OnInteractionEnded;
         }
     }
 
@@ -105,12 +124,12 @@ public class PlayerAnimator : MonoBehaviour
         if (dash)
         {
             dash.DashStarted -= OnDashStarted;
-            dash.DashEnded   -= OnDashEnded;
+            dash.DashEnded -= OnDashEnded;
         }
         if (interactor)
         {
             interactor.InteractionStarted -= OnInteractionStarted;
-            interactor.InteractionEnded   -= OnInteractionEnded;
+            interactor.InteractionEnded -= OnInteractionEnded;
         }
     }
 
@@ -119,18 +138,59 @@ public class PlayerAnimator : MonoBehaviour
         float dt = Time.deltaTime;
         if (dt <= 0f) return;
 
-        // Velocidad real (por desplazamiento): incluye las correcciones del objeto pesado,
-        // así si queda trabado contra una pared el personaje no camina en el lugar.
-        Vector3 velocity = (transform.position - lastPosition) / dt;
-        lastPosition = transform.position;
+        SampleVelocity(dt);
 
         bool isDashing = dash && dash.IsDashing;
         SetBool(IsDashingHash, isDashing);
 
-        UpdateLocomotion(velocity, isDashing, dt);
+        UpdateLocomotion(measuredVelocity, isDashing, dt);
         UpdateAirborne();
         UpdateStates();
     }
+
+    // ---------------- Medición de velocidad ----------------
+
+    /// <summary>
+    /// Velocidad real (por desplazamiento), promediada en una ventana corta.
+    /// Incluye las correcciones del objeto pesado: si queda trabado contra una pared no camina en el lugar.
+    /// Promediar evita los frames con desplazamiento 0 / doble cuando el movimiento va en FixedUpdate.
+    /// </summary>
+    private void SampleVelocity(float dt)
+    {
+        Vector3 pos = transform.position;
+        Vector3 delta = pos - lastPosition;
+        lastPosition = pos;
+
+        // Teletransporte / respawn: no lo contamos como movimiento.
+        float refSpeed = RefSpeed;
+        if (delta.magnitude / dt > refSpeed * teleportSpeedMultiplier && !(dash && dash.IsDashing))
+        {
+            accumulatedDisplacement = Vector3.zero;
+            accumulatedTime = 0f;
+            measuredVelocity = Vector3.zero;
+            return;
+        }
+
+        accumulatedDisplacement += delta;
+        accumulatedTime += dt;
+
+        if (accumulatedTime >= velocitySampleWindow)
+        {
+            measuredVelocity = accumulatedDisplacement / accumulatedTime;
+            accumulatedDisplacement = Vector3.zero;
+            accumulatedTime = 0f;
+        }
+    }
+
+    private void ResetVelocitySampling()
+    {
+        lastPosition = transform.position;
+        accumulatedDisplacement = Vector3.zero;
+        accumulatedTime = 0f;
+        measuredVelocity = Vector3.zero;
+    }
+
+    private float RefSpeed => movement ? Mathf.Max(0.01f, movement.MoveSpeed) : 5f;
 
     // ---------------- Locomoción ----------------
 
@@ -140,17 +200,21 @@ public class PlayerAnimator : MonoBehaviour
         if (isDashing) return;
 
         Vector3 horizontal = new Vector3(velocity.x, 0f, velocity.z);
-        float refSpeed = movement ? Mathf.Max(0.01f, movement.MoveSpeed) : 5f;
+        float refSpeed = RefSpeed;
+
+        // Deadzone: el ruido del CharacterController (gravedad, skin width, rampas) no es caminar.
+        if (horizontal.magnitude < refSpeed * deadzone)
+            horizontal = Vector3.zero;
 
         // Speed: 0 = quieto, ~0.6 = apuntando, 1 = velocidad base.
         float speed = Mathf.Clamp01(horizontal.magnitude / refSpeed);
-        SetFloat(SpeedHash, speed, speedDampTime, dt);
+        SetFloatDampedSnap(SpeedHash, speed, speedDampTime, dt);
 
         // Dirección local para el blend tree 2D (strafe al apuntar, empujar/tirar al arrastrar).
         Vector3 local = transform.InverseTransformDirection(horizontal) / refSpeed;
         local = Vector3.ClampMagnitude(local, 1f);
-        SetFloat(MoveXHash, local.x, directionDampTime, dt);
-        SetFloat(MoveZHash, local.z, directionDampTime, dt);
+        SetFloatDampedSnap(MoveXHash, local.x, directionDampTime, dt);
+        SetFloatDampedSnap(MoveZHash, local.z, directionDampTime, dt);
 
         SetBool(IsAimingHash, movement && movement.IsAiming);
     }
@@ -201,6 +265,8 @@ public class PlayerAnimator : MonoBehaviour
     private void OnDashEnded()
     {
         ResetTrigger(DashHash);
+        // Que el desplazamiento del dash no contamine la primera muestra después.
+        ResetVelocitySampling();
     }
 
     private void OnInteractionStarted(Interactable target)
@@ -232,9 +298,18 @@ public class PlayerAnimator : MonoBehaviour
         if (Has(hash)) animator.SetFloat(hash, value);
     }
 
-    private void SetFloat(int hash, float value, float dampTime, float dt)
+    /// <summary>
+    /// SetFloat con damping, pero que llega a 0 exacto: el damping del Animator es exponencial
+    /// y si no se queda eternamente en valores tipo 0.00003.
+    /// </summary>
+    private void SetFloatDampedSnap(int hash, float value, float dampTime, float dt)
     {
-        if (Has(hash)) animator.SetFloat(hash, value, dampTime, dt);
+        if (!Has(hash)) return;
+
+        animator.SetFloat(hash, value, dampTime, dt);
+
+        if (Mathf.Approximately(value, 0f) && Mathf.Abs(animator.GetFloat(hash)) < snapToZeroThreshold)
+            animator.SetFloat(hash, 0f);
     }
 
     private void SetBool(int hash, bool value)

@@ -468,7 +468,7 @@ Transform:
   m_GameObject: {fileID: 858535351}
   serializedVersion: 2
   m_LocalRotation: {x: -0.30700174, y: 0.49515986, z: -0.1925163, w: -0.78962284}
-  m_LocalPosition: {x: 11.094997, y: 9.633244, z: -6.546364}
+  m_LocalPosition: {x: 6.1897135, y: 4.641419, z: -4.173189}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -486,7 +486,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 886251e9a18ece04ea8e61686c173e1b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Cinemachine::Unity.Cinemachine.CinemachinePositionComposer
-  CameraDistance: 15.49
+  CameraDistance: 8.1
   DeadZoneDepth: 0
   Composition:
     ScreenPosition: {x: 0, y: 0}
@@ -998,7 +998,7 @@ Transform:
   m_GameObject: {fileID: 1179209716}
   serializedVersion: 2
   m_LocalRotation: {x: -0.30700174, y: 0.49515986, z: -0.1925163, w: -0.78962284}
-  m_LocalPosition: {x: 10.281847, y: 11.9632435, z: -4.974354}
+  m_LocalPosition: {x: 5.3765635, y: 6.971419, z: -2.6011794}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1080,6 +1080,11 @@ MonoBehaviour:
     m_VarianceClampScale: 0.9
     m_ContrastAdaptiveSharpening: 0
   m_Version: 2
+--- !u!95 &1867780284 stripped
+Animator:
+  m_CorrespondingSourceObject: {fileID: 7929906376812067818, guid: e76e3a3af8c9c5e42968c424e2b49ef2, type: 3}
+  m_PrefabInstance: {fileID: 618477914}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &2042547862
 GameObject:
   m_ObjectHideFlags: 0
@@ -1333,6 +1338,14 @@ PrefabInstance:
       propertyPath: cam
       value: 
       objectReference: {fileID: 1179209718}
+    - target: {fileID: 5724213243894883012, guid: 97326d69426aff04580bebcea68713fe, type: 3}
+      propertyPath: animator
+      value: 
+      objectReference: {fileID: 1867780284}
+    - target: {fileID: 5724213243894883012, guid: 97326d69426aff04580bebcea68713fe, type: 3}
+      propertyPath: deadzone
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 5997710972746772394, guid: 97326d69426aff04580bebcea68713fe, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
